@@ -37,7 +37,7 @@
 
 - (NSArray *)objectsFromJSON:(id)JSON withObjectClass:(Class)objectClass;
 
-- (NSArray *)objectsFromJSON:(id)JSON;
+- (NSArray *)objectsFromJSON:(id)JSON forMappedClass:(Class)aMappedClass;
 
 - (id)objectFromJSON:(id)JSON withMapping:(BWObjectMapping *)mapping;
 

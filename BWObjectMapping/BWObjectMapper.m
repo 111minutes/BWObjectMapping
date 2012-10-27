@@ -116,12 +116,12 @@
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-- (NSArray *)objectsFromJSON:(id)JSON {
+- (NSArray *)objectsFromJSON:(id)JSON forMappedClass:(Class)aMappedClass {
     NSMutableArray *objects = [NSMutableArray array];
     
     if ([JSON isKindOfClass:[NSArray class]]) {
         [JSON enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            NSArray *newObjects = [self objectsFromJSON:obj];
+            NSArray *newObjects = [self objectsFromJSON:obj forMappedClass:aMappedClass];
             [objects addObjectsFromArray:newObjects];
         }];
         
@@ -133,13 +133,21 @@
             if (nil != rootKeyPathObject) {
                 NSArray *newbjects = [self objectsFromJSON:rootKeyPathObject withMapping:objectMapping];
                 
-                if (newbjects.count > 0)
+                if (newbjects.count > 0) {
                     [objects addObjectsFromArray:newbjects];
+                }
                 
                 *stop = YES;
+                
+            } else {
+                
+                id object = [self objectFromJSON:JSON withObjectClass:aMappedClass];
+                if (object) {
+                    [objects addObject:object];
+                    *stop = YES;
+                }
             }
         }];
-        
     }
     
     return [NSArray arrayWithArray:objects];
@@ -154,7 +162,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 - (id)objectFromJSON:(id)JSON withMapping:(BWObjectMapping *)mapping existingObject:(id)object {
-    id JSONToMap = [JSON objectForKey:mapping.rootKeyPath];
+    id JSONToMap = [JSON objectForKey:mapping.rootKeyPath] ;
     
     if (nil == JSONToMap)
         JSONToMap = JSON;
