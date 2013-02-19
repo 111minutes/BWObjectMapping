@@ -224,10 +224,15 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 - (void)mapDictionary:(NSDictionary *)dict toObject:(id)object withMapping:(BWObjectMapping *)mapping {
     [mapping.attributeMappings enumerateKeysAndObjectsUsingBlock:^(id key, BWObjectAttributeMapping *attributeMapping, BOOL *stop) {
-        [[BWObjectValueMapper shared] setValue:[dict objectForKey:attributeMapping.keyPath]
-                                    forKeyPath:attributeMapping.attribute
-                             withAttributeMapping:attributeMapping
-                                     forObject:object];
+        
+        NSRange containsDotString = [attributeMapping.keyPath rangeOfString:@"."];
+        if (containsDotString.location == NSNotFound) {
+            [self setValue:[dict objectForKey:attributeMapping.keyPath] forMapping:attributeMapping forObject:object];
+        } else {
+            NSArray *keys = [attributeMapping.keyPath componentsSeparatedByString:@"."];
+            [self setNestedValueForKeys:keys fromDictionary:dict forMapping:attributeMapping forObject:object];
+        }
+        
     }];
     
     if (nil != self.didMapObjectBlock) {
@@ -235,5 +240,27 @@
     }
 }
 
+- (void)setValue:(NSString *)value forMapping:(BWObjectAttributeMapping *)attributeMapping forObject:(id)object
+{
+    [[BWObjectValueMapper shared] setValue:value
+                                forKeyPath:attributeMapping.attribute
+                      withAttributeMapping:attributeMapping
+                                 forObject:object];
+}
+
+- (void)setNestedValueForKeys:(NSArray *)keys fromDictionary:(NSDictionary *)dictionary forMapping:(BWObjectAttributeMapping *)attributeMapping forObject:(id)object
+{
+    id valuesContainer = dictionary;
+    id value;
+    for (NSInteger i = 0; i < [keys count]; i++) {
+        NSString *key = [keys objectAtIndex:i];
+        if (i == ([keys count] -1 )) {
+            value = [valuesContainer objectForKey:key];
+        } else {
+            valuesContainer = [valuesContainer objectForKey:key];
+        }
+    }
+    [self setValue:value forMapping:attributeMapping forObject:object];
+}
 
 @end

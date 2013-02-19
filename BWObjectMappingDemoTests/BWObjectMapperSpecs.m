@@ -4,6 +4,7 @@
 #import "User.h"
 #import "Comment.h"
 #import "Entity.h"
+#import "Person.h"
 #import "AppDelegate.h"
 
 #define CUSTOM_VALUE_VALUE @"customValue"
@@ -54,7 +55,7 @@ describe(@"mapping", ^{
             
             NSDictionary *JSON = [NSDictionary dictionaryWithObject:userJSON forKey:@"user"];
             
-            NSArray *objects = [[BWObjectMapper shared] objectsFromJSON:JSON];
+            NSArray *objects = [[BWObjectMapper shared] objectsFromJSON:JSON withObjectClass:[User class]];
             User *user = [objects lastObject];
             Class class = [[objects lastObject] class];
             
@@ -92,7 +93,7 @@ describe(@"mapping", ^{
                 [JSON addObject:dict];
             }
             
-            int objectCount = [[[BWObjectMapper shared] objectsFromJSON:JSON] count];
+            int objectCount = [[[BWObjectMapper shared] objectsFromJSON:JSON withObjectClass:[User class]] count];
             [[theValue(objectCount) should] equal:theValue(expectedNumberOfObjects)];
         });
         
@@ -119,6 +120,75 @@ describe(@"mapping", ^{
             
             [[comment.customValue should] equal:expected];
         });
+        
+    });
+    
+    context(@"Nested Attributes", ^{
+       
+        __block Person *person;
+        __block NSDictionary *JSON;
+        
+        beforeAll(^{
+            
+            [BWObjectMapping mappingForObject:[Person class] block:^(BWObjectMapping *mapping) {
+                [mapping mapKeyPath:@"name" toAttribute:@"name"];
+                [mapping mapKeyPath:@"contact.email" toAttribute:@"email"];
+                [mapping mapKeyPath:@"contact.others.skype" toAttribute:@"skype"];
+                [mapping mapKeyPath:@"contact.phones" toAttribute:@"phones"];
+                [mapping mapKeyPath:@"address.location" toAttribute:@"location"];
+                [[BWObjectMapper shared] registerMapping:mapping withRootKeyPath:@"person"];
+            }];
+            
+            [[BWObjectMapper shared] objectWithBlock:^id(Class objectClass, NSString *primaryKey, id primaryKeyValue, id JSON) {
+                return [[objectClass alloc] init];
+            }];
+            
+        });
+        
+        beforeEach(^{
+           
+            JSON = @{ @"person" : @{ @"name" : @"Lucas",
+                                     @"contact" : @{
+                                                     @"email" : @"lucastoc@gmail.com",
+                                                     @"phones" : @[ @"(12)1233-1333", @"(85)12331233" ],
+                                                     @"others" : @{ @"skype" : @"aspmedeiros"}
+                                                   },
+                                     @"address" : @{
+                                                     @"location" : @{ @"lat": @(-18.123123123), @"long" : @(3.1123123123) }
+                                                   }
+                                   }
+                    };
+            
+            person = [[BWObjectMapper shared] objectFromJSON:JSON withObjectClass:[Person class]];
+            
+        });
+        
+        specify(^{
+            [[person should] beNonNil];
+        });
+        
+        specify(^{
+            [[person.name should] equal:[[JSON objectForKey:@"person"] objectForKey:@"name"]];
+        });
+        
+        specify(^{
+            [[person.email should] equal:[[[JSON objectForKey:@"person"] objectForKey:@"contact"] objectForKey:@"email"]];
+        });
+        
+        specify(^{
+            [[person.skype should] equal:[[[[JSON objectForKey:@"person"] objectForKey:@"contact"] objectForKey:@"others"] objectForKey:@"skype"]];
+        });
+        
+        specify(^{
+            int phonesCount = [person.phones count];
+            int expectedPhoneCount = [[[[JSON objectForKey:@"person"] objectForKey:@"contact"] objectForKey:@"phones"] count];
+            [[theValue(phonesCount) should] equal:theValue(expectedPhoneCount)];
+        });
+        
+        specify(^{
+            [[person.location should] equal:[[[JSON objectForKey:@"person"] objectForKey:@"address"] objectForKey:@"location"]];
+        });
+        
         
     });
     
